@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Team Guide: Distributed Search Engine</title>
+<style>
+  @page { size: A4; margin: 11mm 12mm 11mm 12mm; }
+  :root {
+    --ink: #1d2433; --muted: #5b6475; --line: #d9dde5; --soft: #f4f6f9;
+    --p1: #d9603b; --p2: #1f8a78; --p3: #6a4c9c; --p4: #2367b0; --all: #4a5160;
+    --ok: #e8f5ee; --ok-b: #3c9a68; --warn: #fdeeee; --warn-b: #c94a4a;
+    --say: #eaf1fb; --say-b: #4d7fc4; --note: #fff6e8; --note-b: #e0a040;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; color: var(--ink); font-size: 9.6pt; line-height: 1.34; margin: 0; }
+  h1 { font-size: 26pt; margin: 0 0 4px; line-height: 1.15; }
+  h2 { font-size: 15pt; margin: 0 0 7px; padding-bottom: 5px; border-bottom: 3px solid var(--ink); }
+  h3 { font-size: 11pt; margin: 9px 0 4px; }
+  p { margin: 0 0 5px; }
+  .page { page-break-before: always; }
+  .first { page-break-before: auto; }
+  .muted { color: var(--muted); }
+  .small { font-size: 9pt; }
+  code { font-family: Consolas, "Courier New", monospace; font-size: 9.2pt; background: var(--soft); padding: 0 3px; border-radius: 3px; }
+  pre { font-family: Consolas, "Courier New", monospace; font-size: 8.8pt; background: #eef1f5; border-left: 4px solid #8a93a5;
+        padding: 4px 9px; margin: 3px 0 5px; white-space: pre-wrap; border-radius: 3px; page-break-inside: avoid; }
+  table { width: 100%; border-collapse: collapse; margin: 3px 0 7px; font-size: 9pt; page-break-inside: avoid; }
+  th { background: var(--ink); color: #fff; text-align: left; padding: 3px 6px; font-weight: 600; }
+  td { border-bottom: 1px solid var(--line); padding: 3px 6px; vertical-align: top; }
+  tr:nth-child(even) td { background: #fafbfc; }
+  .pill { display: inline-block; color: #fff; font-weight: 700; font-size: 8.5pt; padding: 1px 7px; border-radius: 9px; white-space: nowrap; }
+  .P1 { background: var(--p1); } .P2 { background: var(--p2); } .P3 { background: var(--p3); } .P4 { background: var(--p4); } .ALL { background: var(--all); }
+  .box { border-left: 4px solid; border-radius: 4px; padding: 5px 10px; margin: 6px 0; page-break-inside: avoid; }
+  .box b.t { display: block; margin-bottom: 2px; }
+  .ok { background: var(--ok); border-color: var(--ok-b); }
+  .warn { background: var(--warn); border-color: var(--warn-b); }
+  .say { background: var(--say); border-color: var(--say-b); }
+  .note { background: var(--note); border-color: var(--note-b); }
+  .box ul { margin: 2px 0 0; padding-left: 18px; }
+  ol.steps { list-style: none; padding: 0; margin: 0; counter-reset: s; }
+  ol.steps > li { counter-increment: s; position: relative; padding-left: 30px; margin-bottom: 6px; page-break-inside: avoid; }
+  ol.steps > li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 21px; height: 21px; border-radius: 50%;
+        background: var(--ink); color: #fff; font-weight: 700; font-size: 9pt; text-align: center; line-height: 21px; }
+  .when { display: inline-block; font-size: 8.5pt; font-weight: 600; color: var(--muted); background: var(--soft);
+          border: 1px solid var(--line); border-radius: 3px; padding: 0 5px; margin-left: 4px; }
+  /* cover */
+  .cover-sub { font-size: 13pt; color: var(--muted); margin-bottom: 18px; }
+  .flow { display: flex; align-items: stretch; gap: 0; margin: 14px 0 6px; }
+  .node { flex: 1; color: #fff; border-radius: 7px; padding: 10px 8px; text-align: center; }
+  .node .r { font-size: 15pt; font-weight: 800; }
+  .node .n { font-size: 9pt; opacity: .9; }
+  .node .j { font-size: 9pt; margin-top: 4px; line-height: 1.3; }
+  .arrow { width: 22px; display: flex; align-items: center; justify-content: center; font-size: 15pt; color: var(--muted); }
+  .names td { height: 44px; }
+  th code { background: rgba(255,255,255,.18); color: #fff; }
+  td.who { white-space: nowrap; }
+  /* role pages */
+  .rolehead { color: #fff; border-radius: 7px; padding: 7px 12px; margin-bottom: 7px; }
+  .rolehead .big { font-size: 16pt; font-weight: 800; }
+  .rolehead .one { font-size: 10.5pt; margin-top: 2px; }
+  .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; background: var(--soft); border-radius: 5px; padding: 6px 10px; font-size: 9pt; margin-bottom: 6px; }
+  .facts b { display: block; color: var(--muted); font-size: 8.3pt; text-transform: uppercase; letter-spacing: .03em; }
+  .phase { font-weight: 700; font-size: 10pt; background: var(--soft); }
+  .msg { font-style: italic; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .footer-note { margin-top: 16px; text-align: center; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<!-- ============================ COVER ============================ -->
+<section class="first">
+  <h1>Distributed Search Engine:<br>Team Guide</h1>
+  <div class="cover-sub">Who does what, in what order, and how to tell it worked.</div>
+
+  <div class="flow">
+    <div class="node" style="background:var(--p1)"><div class="r">P1</div><div class="n">Node 1 · Ingestion</div><div class="j">Cleans the raw data and loads it into the lakehouse</div></div>
+    <div class="arrow">→</div>
+    <div class="node" style="background:var(--p2)"><div class="r">P2</div><div class="n">Node 2 · Storage</div><div class="j">Runs HDFS and keeps every version of the tables</div></div>
+    <div class="arrow">→</div>
+    <div class="node" style="background:var(--p3)"><div class="r">P3</div><div class="n">Node 3 · Compute</div><div class="j">Builds the index and PageRank, then exports them</div></div>
+    <div class="arrow">→</div>
+    <div class="node" style="background:var(--p4)"><div class="r">P4</div><div class="n">Node 4 · Search</div><div class="j">Serves the search website from the export</div></div>
+  </div>
+
+  <table class="names" style="margin-top:12px">
+    <tr><th style="width:25%">P1 (Node 1)</th><th style="width:25%">P2 (Node 2)</th><th style="width:25%">P3 (Node 3)</th><th style="width:25%">P4 (Node 4)</th></tr>
+    <tr><td></td><td></td><td></td><td></td></tr>
+  </table>
+
+  <h3>The whole project in 4 sentences</h3>
+  <p>We build a small search engine across 4 Linux VMs that talk over a private network (ZeroTier).
+  P1 feeds in a file of web pages; bad lines are thrown out and the rest go into versioned tables stored on P2's and P3's machines.
+  P3's machine runs Spark jobs that build a word index and a popularity score (PageRank), then packages them as files.
+  P4's machine downloads that package and answers searches on a web page.</p>
+
+  <h3>How to use this guide</h3>
+  <table>
+    <tr><th style="width:30%">Section</th><th>Read it if…</th></tr>
+    <tr><td>1. Big picture</td><td>Everyone. Read before Day 1.</td></tr>
+    <tr><td>2. Before Day 1</td><td>Everyone. Each person prepares their own VM.</td></tr>
+    <tr><td>3. Day 1 setup</td><td>Everyone, together on a call. Steps must go in order.</td></tr>
+    <tr><td>4–7. Your role page</td><td>Your own page in detail; skim the other three.</td></tr>
+    <tr><td>8. Full run order</td><td>The single page to keep open during every run and the demo.</td></tr>
+    <tr><td>9. Every session &amp; demo day</td><td>Before every work session and before the evaluation.</td></tr>
+    <tr><td>10. When things break</td><td>When something fails. Start with the network section.</td></tr>
+  </table>
+
+  <div class="box note"><b class="t">Reading the commands</b>
+  Grey boxes are commands: type them exactly, on <b>your own VM</b>, from inside the project folder (<code>cd ~/dse</code>).
+  The coloured pill (<span class="pill P1">P1</span> <span class="pill P2">P2</span> <span class="pill P3">P3</span> <span class="pill P4">P4</span> <span class="pill ALL">ALL</span>) says who types it.
+  Green boxes tell you how to know it worked. Blue boxes are what to say in the viva.</div>
+</section>
+
+<!-- ============================ 1. BIG PICTURE ============================ -->
+<section class="page">
+  <h2>1. The big picture</h2>
+
+  <h3>What each machine runs</h3>
+  <table>
+    <tr><th style="width:13%">Machine</th><th style="width:8%">Owner</th><th>Keeps running in the background</th><th style="width:33%">If it is off…</th></tr>
+    <tr><td><b>node1</b></td><td><span class="pill P1">P1</span></td><td>Nothing. It only <i>starts</i> the ingestion job.</td><td>Only ingestion is blocked.</td></tr>
+    <tr><td><b>node2</b></td><td><span class="pill P2">P2</span></td><td>HDFS NameNode + DataNode, Spark Worker</td><td><b>Nothing works for anyone.</b></td></tr>
+    <tr><td><b>node3</b></td><td><span class="pill P3">P3</span></td><td>Spark Master + Worker, HDFS DataNode, History Server</td><td><b>Nothing works for anyone.</b></td></tr>
+    <tr><td><b>node4</b></td><td><span class="pill P4">P4</span></td><td>The search API (starts by itself once installed)</td><td>Only the search website is down.</td></tr>
+  </table>
+  <div class="box warn"><b class="t">node2 and node3 are the critical pair</b>
+  Every Spark job needs both. P2 and P3: keep your VM (and the laptop it runs on) switched on and awake whenever anyone is working.</div>
+
+  <h3>Who waits for whom</h3>
+  <p>The work is a relay. Nobody starts their step until the person before them says so in the group chat.</p>
+  <table>
+    <tr><th style="width:6%">#</th><th style="width:9%">Who</th><th>Does</th><th style="width:38%">Then posts in the group chat</th></tr>
+    <tr><td>1</td><td><span class="pill P1">P1</span></td><td>Ingests the data file</td><td class="msg">"Phase 0 is in, P3 go"</td></tr>
+    <tr><td>2</td><td><span class="pill P3">P3</span></td><td>Runs index → PageRank → export</td><td class="msg">"v1 is ready, P4 go"</td></tr>
+    <tr><td>3</td><td><span class="pill P4">P4</span></td><td>Pulls v1 and checks searches work</td><td class="msg">"Serving v1, everyone test"</td></tr>
+    <tr><td>4</td><td><span class="pill P2">P2</span></td><td>Records the snapshot ID (S0)</td><td class="msg">"S0 = &lt;number&gt;"</td></tr>
+  </table>
+  <p class="small muted">Then the same relay again with the Phase 1 "changes" file, producing v2 and snapshot S1.</p>
+
+  <h3>The words you need to know</h3>
+  <table>
+    <tr><th style="width:22%">Term</th><th>Meaning in this project</th></tr>
+    <tr><td><b>ZeroTier</b></td><td>A virtual private network so the 4 VMs can reach each other from different houses. Each VM gets a fixed IP ending .11–.14.</td></tr>
+    <tr><td><b>HDFS</b></td><td>A file system spread over node2 and node3. Every file is stored twice (replication 2), so one machine can fail without losing data.</td></tr>
+    <tr><td><b>NameNode / DataNode</b></td><td>NameNode (node2) keeps the list of which file is where. DataNodes (node2, node3) hold the actual data.</td></tr>
+    <tr><td><b>Spark</b></td><td>Runs a job in parallel. The Master (node3) hands out tasks; Workers (node2, node3) do them. If a worker dies, its tasks are redone elsewhere.</td></tr>
+    <tr><td><b>Apache Iceberg</b></td><td>The table format. Every change creates a <b>snapshot</b>, so you can look at old versions (time travel) or undo a change (rollback).</td></tr>
+    <tr><td><b>Inverted index</b></td><td>word → which pages contain it, and how often. Like the index at the back of a book.</td></tr>
+    <tr><td><b>PageRank</b></td><td>A page is important if important pages link to it. Damping 0.85, at least 10 rounds (we use 20).</td></tr>
+    <tr><td><b>BM25</b></td><td>How well a page matches the search words. Repeating a word has diminishing returns; long pages don't get an unfair advantage. k1 = 1.2, b = 0.75.</td></tr>
+    <tr><td><b>Export / vN</b></td><td>P3's checked package of results (Parquet files + <code>manifest.json</code>), in <code>/exports/v1</code>, <code>/exports/v2</code>, …</td></tr>
+  </table>
+  <div class="box say"><b class="t">Final ranking formula</b>
+  Final score = 0.7 × (BM25 ÷ highest BM25) + 0.3 × (PageRank ÷ highest PageRank)</div>
+</section>
+
+<!-- ============================ 2. BEFORE DAY 1 ============================ -->
+<section class="page">
+  <h2>2. Before Day 1 <span class="pill ALL">ALL</span></h2>
+  <p>Each person does this alone, on their own VM, before the group call.</p>
+
+  <ol class="steps">
+    <li><b>Have an Ubuntu 22.04 VM ready.</b> At least 2 CPU cores, 4 GB RAM, 20 GB disk. Make sure you can open a terminal in it and that it has internet.</li>
+    <li><b>Use the same username as everyone else.</b> The default is <code>ubuntu</code>. If the team uses a different name, P2 changes <code>CLUSTER_USER</code> in <code>cluster.env</code>.</li>
+    <li><b>Install git and clone the project into a folder called <code>dse</code></b> in your home directory. The folder name matters: every command in this guide uses <code>~/dse</code>.
+<pre>sudo apt-get update &amp;&amp; sudo apt-get install -y git
+git clone &lt;our-repo-url&gt; ~/dse
+cd ~/dse</pre></li>
+    <li><span class="pill P1">P1</span> <b>Get the data files</b> from the course and put them on node1 as <code>~/data/pages.jsonl</code> and <code>~/data/changes.jsonl</code>. They are not in the repo on purpose.</li>
+    <li><span class="pill P2">P2</span> <b>Make a ZeroTier account</b> at <code>my.zerotier.com</code> (free).</li>
+    <li><b>Read your own role page</b> (sections 4–7) once, so Day 1 makes sense.</li>
+  </ol>
+
+  <h3>The 6 team rules</h3>
+  <table>
+    <tr><th style="width:5%">#</th><th>Rule</th><th style="width:40%">Why</th></tr>
+    <tr><td>1</td><td><b>Same username on all 4 VMs.</b></td><td>The scripts and the cluster assume it.</td></tr>
+    <tr><td>2</td><td><b>Never format the NameNode by hand.</b> Only <code>start_node.sh 2</code> does it, and only the very first time.</td><td>Formatting again erases all stored data.</td></tr>
+    <tr><td>3</td><td><b>node2 and node3 stay on</b> while anyone works.</td><td>Every job needs both.</td></tr>
+    <tr><td>4</td><td><b>Shared files belong to P2:</b> <code>cluster.env</code> and <code>conf/</code>. Ask in the chat before changing them; P2 pushes, everyone pulls.</td><td>All 4 copies must be identical.</td></tr>
+    <tr><td>5</td><td><b>Two tokenizer copies stay identical.</b> After editing <code>jobs/textutil.py</code>, run <code>bash scripts/sync_textutil.sh</code>.</td><td>Otherwise searches silently find nothing.</td></tr>
+    <tr><td>6</td><td><b>Always run commands from <code>~/dse</code>.</b></td><td>The scripts use paths relative to it.</td></tr>
+  </table>
+
+  <h3>Sharing changes with git</h3>
+  <p>When someone changes a file the others need (for example P2 filling in <code>cluster.env</code>), they push it and everyone else pulls:</p>
+<pre># the person who changed it
+git add cluster.env &amp;&amp; git commit -m "Real ZeroTier IPs" &amp;&amp; git push
+# everyone else
+cd ~/dse &amp;&amp; git pull</pre>
+</section>
+
+<!-- ============================ 3. DAY 1 ============================ -->
+<section class="page">
+  <h2>3. Day 1 setup: all together, in this order</h2>
+  <p>Do this on a call. Don't skip ahead: each step needs the one before it. Expect about 1–1.5 hours.</p>
+
+  <h3>Part A: Network (about 15 min)</h3>
+  <ol class="steps">
+    <li><span class="pill P2">P2</span> On <code>my.zerotier.com</code>: <b>Create A Network</b>. Keep Access Control on <i>Private</i>. Under IPv4 Auto-Assign pick <code>10.147.17.*</code>. Post the 16-character <b>Network ID</b> in the chat.</li>
+    <li><span class="pill ALL">ALL</span> Install ZeroTier and join:
+<pre>curl -s https://install.zerotier.com | sudo bash
+sudo zerotier-cli join &lt;NETWORK_ID&gt;</pre></li>
+    <li><span class="pill P2">P2</span> In the web UI under <b>Members</b>: tick <b>Auth</b> for all 4 machines, then give each a fixed IP: node1 = <code>.11</code>, node2 = <code>.12</code>, node3 = <code>.13</code>, node4 = <code>.14</code>. Delete any other auto-assigned IPs.</li>
+    <li><span class="pill ALL">ALL</span> Check you got your IP: <code>sudo zerotier-cli listnetworks</code> must show <b>OK</b> and your <code>10.147.17.x</code> address. If not, see section 10.</li>
+    <li><span class="pill P2">P2</span> Put the 4 IPs into <code>cluster.env</code> (they're already .11–.14 if you used those), then push. <span class="pill ALL">ALL</span> run <code>git pull</code>.</li>
+    <li><span class="pill ALL">ALL</span> Name your machine (N = your node number, so P1 types 1, P2 types 2, …):
+<pre>cd ~/dse
+sudo bash scripts/setup_hosts.sh N</pre>
+    <div class="box ok"><b class="t">Worked if</b> it prints <b>reachable</b> four times (node1 … node4).</div></li>
+  </ol>
+
+  <h3>Part B: Install software (about 10 min, everyone at once)</h3>
+  <ol class="steps" style="counter-reset: s 6">
+    <li><span class="pill ALL">ALL</span>
+<pre>sudo bash scripts/install_node.sh N
+source /etc/profile.d/bigdata.sh</pre>
+    It installs Java, Hadoop, Spark + Iceberg (nodes 1–3) and the search libraries (node4), writes the configs and sets the firewall.</li>
+  </ol>
+
+  <h3>Part C: Start the cluster (about 10 min)</h3>
+  <ol class="steps" style="counter-reset: s 7">
+    <li><span class="pill P2">P2</span> <b>First</b>: <code>bash scripts/start_node.sh 2</code></li>
+    <li><span class="pill P3">P3</span> <b>Within a minute after P2</b>: <code>bash scripts/start_node.sh 3</code></li>
+    <li><span class="pill P2">P2</span> Check: <code>bash scripts/check_cluster.sh</code>
+    <div class="box ok"><b class="t">Worked if</b>
+    <ul><li><b>Live datanodes (2)</b> and <b>2 ALIVE</b> workers.</li>
+    <li><code>jps</code> on node2 shows NameNode, DataNode, Worker. On node3: Master, Worker, DataNode, HistoryServer.</li></ul></div></li>
+    <li><span class="pill P2">P2</span> Create the empty tables (only once, ever): <code>bash scripts/submit.sh jobs/init_tables.py</code></li>
+    <li><span class="pill P4">P4</span> Install the search service: <code>sudo bash search/install_service.sh</code>. Then <code>curl localhost:8000/health</code> should answer (<code>"ok": false</code> is normal until there is data).</li>
+    <li><span class="pill P1">P1</span> Check the data's field names and post them in the chat:
+<pre>python3 scripts/inspect_dataset.py ~/data/pages.jsonl ~/data/changes.jsonl</pre>
+    If a field name isn't in the <code>FIELD_ALIASES</code> list at the top of <code>jobs/ingest.py</code>, add it there and push.</li>
+  </ol>
+  <div class="box note"><b class="t">Day 1 is done when</b> check_cluster.sh is green, the tables exist, P4's service answers, and P1 has confirmed the field names. Agree a time for the first full run (section 8).</div>
+</section>
+
+<!-- ============================ 4. P1 ============================ -->
+<section class="page">
+  <div class="rolehead" style="background:var(--p1)"><div class="big">P1: Ingestion (Node 1)</div>
+  <div class="one">Take the raw data file, throw away broken lines, keep only the newest version of each page, and load the clean pages into the Iceberg table.</div></div>
+
+  <div class="facts">
+    <div><b>Your machine runs</b>Nothing in the background. You only start jobs.</div>
+    <div><b>You wait for</b>Day 1 to be finished (cluster green).</div>
+    <div><b>Your files to understand</b><code>jobs/ingest.py</code>, <code>scripts/node1_ingest_phase.sh</code>, <code>scripts/inspect_dataset.py</code></div>
+    <div><b>You hand off to</b><span class="pill P3">P3</span> after each phase.</div>
+  </div>
+
+  <h3>Phase 0: the first data file</h3>
+  <ol class="steps">
+    <li>Make sure <code>~/data/pages.jsonl</code> exists on node1.</li>
+    <li>Run:
+<pre>cd ~/dse
+bash scripts/node1_ingest_phase.sh 0 ~/data/pages.jsonl</pre>
+    This uploads the file to HDFS (2 copies), then runs the Spark ingestion job. Takes a few minutes.</li>
+    <li>Read the summary: lines read, how many were rejected and why, duplicates dropped.
+    <div class="box ok"><b class="t">Worked if</b> the end shows <code>DONE. pages snapshot None -&gt; &lt;a long number&gt;</code> and an <code>ingest_log</code> table.</div></li>
+    <li>Post <span class="msg">"Phase 0 is in, P3 go"</span>.</li>
+  </ol>
+
+  <h3>Phase 1: the changes file <span class="when">only after P4 is serving v1</span></h3>
+  <ol class="steps" style="counter-reset: s 4">
+    <li>Run:
+<pre>bash scripts/node1_ingest_phase.sh 1 ~/data/changes.jsonl</pre>
+    Newer versions replace old pages, deletes remove pages, and older (stale) versions are ignored.
+    <div class="box ok"><b class="t">Worked if</b> it prints <code>actions={...}</code> with some <code>update</code> / <code>insert</code> / <code>delete</code>, and ends with <code>DONE</code>.</div></li>
+    <li><b>Run exactly the same command again.</b> This proves that re-running changes nothing (idempotency).
+    <div class="box ok"><b class="t">Worked if</b> it says <code>actions={'noop': …}</code> and <code>No page changes -&gt; skipping MERGE</code>.</div></li>
+    <li>Post <span class="msg">"Phase 1 is in, P3 go"</span>.</li>
+  </ol>
+
+  <h3>On demo day</h3>
+  <ul>
+    <li>Run Phase 0 and show the reject reasons.</li>
+    <li>Run Phase 1, then run it again to show nothing changes.</li>
+    <li>For the rollback demo, P2 may ask you to ingest a deliberately bad file as phase 2: <code>bash scripts/node1_ingest_phase.sh 2 ~/data/bad.jsonl</code></li>
+  </ul>
+
+  <div class="box say"><b class="t">What to say in the viva</b>
+  "Each line is parsed with <code>json.loads</code> on the Spark workers. Bad lines go to a <i>rejects</i> table with a reason, such as malformed_json or missing_url.
+  For duplicates I keep the highest version, using a window function. Then I compare against the current Iceberg table, so only real changes go into one
+  <b>MERGE INTO</b>, which is one atomic snapshot. That's why running a phase twice changes nothing. Finally I drop links that point to pages that don't exist."</div>
+</section>
+
+<!-- ============================ 5. P2 ============================ -->
+<section class="page">
+  <div class="rolehead" style="background:var(--p2)"><div class="big">P2: Storage &amp; Lakehouse (Node 2)</div>
+  <div class="one">Run the network and HDFS, keep two copies of everything, own the shared config, and look after the Iceberg tables and their snapshots.</div></div>
+
+  <div class="facts">
+    <div><b>Your machine runs</b>HDFS NameNode, HDFS DataNode, Spark Worker. <b style="display:inline;color:var(--warn-b);text-transform:none;font-size:9.5pt">Keep it on.</b></div>
+    <div><b>You own</b>ZeroTier network, <code>cluster.env</code>, <code>conf/</code></div>
+    <div><b>Your files to understand</b><code>conf/core-site.xml</code>, <code>conf/hdfs-site.xml</code>, <code>jobs/init_tables.py</code>, <code>jobs/maintenance.py</code></div>
+    <div><b>Most work on</b>Day 1 (network + cluster start).</div>
+  </div>
+
+  <h3>At the start of every work session</h3>
+<pre>bash scripts/check_cluster.sh</pre>
+  <p>If the VM was restarted, first run <code>bash scripts/start_node.sh 2</code> (it does <b>not</b> re-format; that only happens the very first time). See section 9.</p>
+
+  <h3>After each phase: record the snapshot</h3>
+  <ol class="steps">
+    <li>
+<pre>bash scripts/submit.sh jobs/maintenance.py snapshots</pre>
+    Look at the <code>lake.db.pages</code> table. After Phase 0, the latest <code>snapshot_id</code> is <b>S0</b>; after Phase 1, it's <b>S1</b>. Write both down and post them in the chat. (P1's <code>DONE</code> line also shows them.)</li>
+  </ol>
+
+  <h3>Demos you run</h3>
+  <table>
+    <tr><th style="width:28%">Demo</th><th>Command</th></tr>
+    <tr><td>"Every file has 2 copies"</td><td><code>hdfs fsck /input -files -blocks -locations</code> → look for <code>repl=2</code> and both node2 and node3.</td></tr>
+    <tr><td>Snapshot history</td><td><code>bash scripts/submit.sh jobs/maintenance.py snapshots</code></td></tr>
+    <tr><td>Time travel: what changed</td><td><code>bash scripts/submit.sh jobs/maintenance.py diff --from S0 --to S1</code></td></tr>
+    <tr><td>What was rejected</td><td><code>bash scripts/submit.sh jobs/maintenance.py rejects</code></td></tr>
+    <tr><td>Kill a Spark helper <span class="small">(with P3)</span></td><td>While P3's long PageRank runs, on node2:<br><code>kill -9 $(jps | awk '/CoarseGrainedExecutorBackend/{print $1}')</code></td></tr>
+    <tr><td>Lose a DataNode <span class="small">(with P3)</span></td><td>P3 runs <code>hdfs --daemon stop datanode</code>. You show reading still works:<br><code>hdfs dfs -cat /input/pages.jsonl | head -2</code> and <code>hdfs fsck /</code> (shows "under-replicated"). Then P3 restarts it with <code>hdfs --daemon start datanode</code>.</td></tr>
+  </table>
+
+  <h3>Rollback demo (undo a bad update)</h3>
+  <ol class="steps">
+    <li><span class="pill P1">P1</span> ingests a deliberately bad file as phase 2.</li>
+    <li><span class="pill P2">P2</span> rolls the pages table back to the good snapshot:
+<pre>bash scripts/submit.sh jobs/maintenance.py rollback --table pages --snapshot S1</pre></li>
+    <li><span class="pill P3">P3</span> re-runs <code>bash scripts/node3_process.sh</code>, then <span class="pill P4">P4</span> runs <code>bash search/pull_export.sh</code>. Search is back to the good data.</li>
+  </ol>
+
+  <div class="box say"><b class="t">What to say in the viva</b>
+  "HDFS keeps every block on both DataNodes (replication 2), so losing one DataNode loses no data. Iceberg stores its data <i>and</i> metadata in HDFS.
+  Every commit is a snapshot, so we can time travel with <code>VERSION AS OF</code> and roll back a bad update.
+  One honest weak spot: the NameNode on node2 is a single point of failure."</div>
+</section>
+
+<!-- ============================ 6. P3 ============================ -->
+<section class="page">
+  <div class="rolehead" style="background:var(--p3)"><div class="big">P3: Compute (Node 3)</div>
+  <div class="one">Run the Spark master, build the inverted index, compute PageRank, check everything, and publish the export for Node 4.</div></div>
+
+  <div class="facts">
+    <div><b>Your machine runs</b>Spark Master + Worker, HDFS DataNode, History Server. <b style="display:inline;color:var(--warn-b);text-transform:none;font-size:9.5pt">Keep it on.</b></div>
+    <div><b>You wait for</b><span class="pill P1">P1</span>'s "Phase N is in, P3 go".</div>
+    <div><b>Your files to understand</b><code>jobs/index.py</code>, <code>jobs/pagerank.py</code>, <code>jobs/export.py</code>, <code>scripts/node3_process.sh</code>, <code>conf/spark-defaults.conf</code></div>
+    <div><b>You hand off to</b><span class="pill P4">P4</span> after each export.</div>
+  </div>
+
+  <h3>At the start of every work session</h3>
+  <p>If the VM was restarted, run <code>bash scripts/start_node.sh 3</code> <b>after</b> P2 has started node2.</p>
+
+  <h3>Each time P1 says "go"</h3>
+  <ol class="steps">
+    <li>Run all three jobs in one go (it stops at the first failure, so a broken step never gets published):
+<pre>cd ~/dse
+bash scripts/node3_process.sh</pre>
+    Or one at a time, if you want to show each one:
+<pre>bash scripts/submit.sh jobs/index.py
+bash scripts/submit.sh jobs/pagerank.py --iterations 20
+bash scripts/submit.sh jobs/export.py</pre></li>
+    <li>Check the three results:
+    <div class="box ok"><b class="t">Worked if</b>
+    <ul><li><code>INDEX DONE (full)</code> the first time, <code>INDEX DONE (incremental)</code> after Phase 1.</li>
+    <li>PageRank's <code>L1 change</code> gets smaller every round, and it ends with <code>sum of ranks = 1.000000</code>.</li>
+    <li><code>EXPORT PUBLISHED: …/exports/v1</code> (then <code>v2</code> after Phase 1). <code>hdfs dfs -ls /exports</code> lists it.</li></ul></div></li>
+    <li>Post <span class="msg">"v1 is ready, P4 go"</span> (or v2).</li>
+  </ol>
+
+  <div class="box note"><b class="t">"EXPORT REJECTED … index is stale" is not a bug</b>
+  The export refuses to publish if the index or PageRank is older than the data. Just run <code>node3_process.sh</code>, which runs all three in the right order.</div>
+
+  <h3>Demos you run</h3>
+  <table>
+    <tr><th style="width:28%">Demo</th><th>How</th></tr>
+    <tr><td>PageRank converging</td><td>Point at the <code>L1 change</code> lines shrinking each iteration.</td></tr>
+    <tr><td>A Spark worker dies mid-job <span class="small">(with P2)</span></td><td>Start <code>bash scripts/submit.sh jobs/pagerank.py --iterations 30</code>. While it runs, P2 kills the executor on node2. Open <code>http://node3:4040</code>: the executor shows as lost, its tasks re-run, and the job still finishes with sum ≈ 1.0.</td></tr>
+    <tr><td>A DataNode dies <span class="small">(with P2)</span></td><td><code>hdfs --daemon stop datanode</code>; P2 shows reading still works; then <code>hdfs --daemon start datanode</code>.</td></tr>
+    <tr><td>Where the time went</td><td>Open <code>http://node3:18080</code>, click a job, show stage times and <i>Shuffle Read/Write</i> (the network traffic).</td></tr>
+  </table>
+
+  <div class="box say"><b class="t">What to say in the viva</b>
+  "Indexing is MapReduce: map tokenizes each page, reduce counts words per page, giving (term, doc, tf). After an update I compare the old and new Iceberg
+  snapshots and re-index only the changed pages. PageRank runs 20 rounds with d = 0.85; pages with no out-links share their score with everyone, so the total stays 1.
+  We checkpoint to HDFS every 5 rounds, so a crash only repeats a few rounds. The export only publishes if every check passes, using an atomic HDFS rename."</div>
+</section>
+
+<!-- ============================ 7. P4 ============================ -->
+<section class="page">
+  <div class="rolehead" style="background:var(--p4)"><div class="big">P4: Search &amp; UI (Node 4)</div>
+  <div class="one">Download the export, load it into memory, rank pages with BM25 + PageRank, and show results on a web page.</div></div>
+
+  <div class="facts">
+    <div><b>Your machine runs</b>Only the search API (FastAPI). It restarts by itself after a reboot.</div>
+    <div><b>You wait for</b><span class="pill P3">P3</span>'s "vN is ready".</div>
+    <div><b>Your files to understand</b>Everything in <code>search/</code>: <code>app.py</code>, <code>static/index.html</code>, <code>pull_export.sh</code>, <code>verify_export.py</code></div>
+    <div><b>Most independent role</b>You can work on the UI before any data exists.</div>
+  </div>
+
+  <h3>Setup (Day 1, once)</h3>
+<pre>cd ~/dse
+sudo bash search/install_service.sh
+curl localhost:8000/health</pre>
+  <p>The install script fills in your username and folder automatically. <code>"ok": false</code> from <code>/health</code> is normal until you pull the first export.</p>
+
+  <h3>Before v1 exists</h3>
+  <p>Improve the web page in <code>search/static/index.html</code>. This is your part to shine. Agree <b>5 test search words</b> with the team (words that appear in the data).</p>
+
+  <h3>When P3 says "v1 is ready"</h3>
+  <ol class="steps">
+    <li>
+<pre>bash search/pull_export.sh</pre>
+    It downloads the export, checks it, switches to it, and tells the API to reload.
+    <div class="box ok"><b class="t">Worked if</b> it ends with <code>now serving v1</code>, and <code>curl "localhost:8000/search?q=water"</code> returns JSON results.</div></li>
+    <li>Open the website and search the 5 test words. Take screenshots (they should show <b>index v1</b>).
+    <ul><li>From inside node4: <code>http://localhost:8000/</code></li>
+    <li>From a laptop that has joined the ZeroTier network: <code>http://10.147.17.14:8000/</code></li></ul></li>
+    <li>Post <span class="msg">"Serving v1, everyone test"</span>.</li>
+    <li>After Phase 1, when P3 says "v2 is ready": run <code>pull_export.sh</code> again and repeat the same 5 searches. Results should change (updated pages move, deleted pages disappear, new ones appear) and the page shows <b>index v2</b>.</li>
+  </ol>
+
+  <h3>Demos you run</h3>
+  <table>
+    <tr><th style="width:30%">Demo</th><th>Command</th></tr>
+    <tr><td>A bad export can't break search</td><td><code>bash search/pull_export.sh 999</code> fails, then <code>curl localhost:8000/health</code> still shows the old version.</td></tr>
+    <tr><td>Before / after the changes</td><td><code>bash search/pull_export.sh 1</code> → back to v1. <code>bash search/pull_export.sh 2</code> → forward to v2.</td></tr>
+  </table>
+
+  <div class="box warn"><b class="t">No results for an obvious word?</b>
+  The two tokenizer files differ. Run <code>bash scripts/sync_textutil.sh</code>, then <code>sudo systemctl restart search</code>.</div>
+
+  <div class="box say"><b class="t">What to say in the viva</b>
+  "Node 4 never talks to Spark or Iceberg. It only reads the checked Parquet export into memory as a dictionary of term → (docs, tf). For each query I compute
+  BM25 with k1 = 1.2 and b = 0.75, divide by the best BM25, mix in PageRank divided by the best PageRank, with 0.7 / 0.3 weights.
+  A new version only goes live if it downloads, passes verification and loads; otherwise the old one keeps serving."</div>
+</section>
+
+<!-- ============================ 8. RUN ORDER ============================ -->
+<section class="page">
+  <h2>8. The full run, step by step</h2>
+  <p>Keep this page open during every practice run and the demo. Do each row only after the row above it is finished.</p>
+  <table>
+    <tr><th style="width:5%">#</th><th style="width:13%">Who</th><th>Command (from <code>~/dse</code>)</th><th style="width:31%">Done when you see</th></tr>
+    <tr><td colspan="4" class="phase">Start of session (see section 9 if any VM was restarted)</td></tr>
+    <tr><td>0</td><td class="who"><span class="pill P2">P2</span></td><td><code>bash scripts/check_cluster.sh</code></td><td>Live datanodes (2), 2 ALIVE workers</td></tr>
+    <tr><td colspan="4" class="phase">Phase 0: base data → v1</td></tr>
+    <tr><td>1</td><td class="who"><span class="pill P1">P1</span></td><td><code>bash scripts/node1_ingest_phase.sh 0 ~/data/pages.jsonl</code></td><td><code>DONE. pages snapshot None -&gt; …</code></td></tr>
+    <tr><td>2</td><td class="who"><span class="pill P3">P3</span></td><td><code>bash scripts/node3_process.sh</code></td><td><code>EXPORT PUBLISHED: …/v1</code></td></tr>
+    <tr><td>3</td><td class="who"><span class="pill P4">P4</span></td><td><code>bash search/pull_export.sh</code></td><td><code>now serving v1</code></td></tr>
+    <tr><td>4</td><td class="who"><span class="pill ALL">ALL</span></td><td>Search the 5 test words; screenshots</td><td>Results say index v1</td></tr>
+    <tr><td>5</td><td class="who"><span class="pill P2">P2</span></td><td><code>bash scripts/submit.sh jobs/maintenance.py snapshots</code></td><td>Note pages snapshot = <b>S0</b></td></tr>
+    <tr><td colspan="4" class="phase">Phase 1: changes → v2</td></tr>
+    <tr><td>6</td><td class="who"><span class="pill P1">P1</span></td><td><code>bash scripts/node1_ingest_phase.sh 1 ~/data/changes.jsonl</code></td><td><code>actions={… update/insert/delete …}</code></td></tr>
+    <tr><td>7</td><td class="who"><span class="pill P1">P1</span></td><td>Same command again</td><td><code>No page changes -&gt; skipping MERGE</code></td></tr>
+    <tr><td>8</td><td class="who"><span class="pill P3">P3</span></td><td><code>bash scripts/node3_process.sh</code></td><td><code>INDEX DONE (incremental)</code>, <code>EXPORT PUBLISHED: …/v2</code></td></tr>
+    <tr><td>9</td><td class="who"><span class="pill P4">P4</span></td><td><code>bash search/pull_export.sh</code></td><td><code>now serving v2</code></td></tr>
+    <tr><td>10</td><td class="who"><span class="pill ALL">ALL</span></td><td>Same 5 searches again; screenshots</td><td>Results changed, index v2</td></tr>
+    <tr><td>11</td><td class="who"><span class="pill P2">P2</span></td><td><code>…maintenance.py snapshots</code>, then<br><code>…maintenance.py diff --from S0 --to S1</code></td><td>Note <b>S1</b>; diff lists inserted / updated / deleted pages</td></tr>
+    <tr><td colspan="4" class="phase">Fault-tolerance demos (any order)</td></tr>
+    <tr><td>12</td><td class="who"><span class="pill P3">P3</span>+<span class="pill P2">P2</span></td><td>Kill a Spark executor during a 30-iteration PageRank</td><td>Job still finishes, sum ≈ 1.0</td></tr>
+    <tr><td>13</td><td class="who"><span class="pill P3">P3</span>+<span class="pill P2">P2</span></td><td>Stop node3's DataNode; read a file; restart it</td><td>Reading still works</td></tr>
+    <tr><td>14</td><td class="who"><span class="pill P4">P4</span></td><td><code>bash search/pull_export.sh 999</code>, then <code>pull_export.sh 1</code> / <code>2</code></td><td>Old version keeps serving; switching works</td></tr>
+    <tr><td>15</td><td class="who"><span class="pill P1">P1</span>→<span class="pill P2">P2</span><br><span class="pill P3">P3</span>→<span class="pill P4">P4</span></td><td>Rollback demo (P2's page)</td><td>Search back to good data</td></tr>
+  </table>
+
+  <h3>Suggested schedule</h3>
+  <table>
+    <tr><th style="width:14%">Day</th><th>What</th></tr>
+    <tr><td><b>1</b> together</td><td>Section 3: network, installs, start cluster, tables, search service, check data field names.</td></tr>
+    <tr><td><b>2</b> alone</td><td>Read your own files line by line. P4 builds the UI. P2 and P3 practise their commands.</td></tr>
+    <tr><td><b>3</b> together</td><td>Rows 0–5 (Phase 0 end to end) with screenshots.</td></tr>
+    <tr><td><b>4</b> together</td><td>Rows 6–15 (Phase 1 and all demos).</td></tr>
+    <tr><td><b>5</b> together</td><td>Rehearse the whole table from a fresh start. Write your report section. Quiz each other on every role.</td></tr>
+  </table>
+</section>
+
+<!-- ============================ 9. EVERY SESSION + DEMO DAY ============================ -->
+<section class="page">
+  <h2>9. Every session, and demo day</h2>
+
+  <h3>Starting a work session (and after any VM restart)</h3>
+  <ol class="steps">
+    <li><span class="pill ALL">ALL</span> Turn on your VM. Check the network: <code>sudo zerotier-cli listnetworks</code> shows <b>OK</b>, and <code>ping node2</code> answers.</li>
+    <li><span class="pill ALL">ALL</span> <code>cd ~/dse &amp;&amp; git pull</code> to get any changes the team pushed.</li>
+    <li><span class="pill P2">P2</span> If node2 was restarted: <code>bash scripts/start_node.sh 2</code></li>
+    <li><span class="pill P3">P3</span> If node3 was restarted (after P2): <code>bash scripts/start_node.sh 3</code></li>
+    <li><span class="pill P2">P2</span> <code>bash scripts/check_cluster.sh</code>: 2 DataNodes, 2 workers.</li>
+    <li><span class="pill P4">P4</span> Nothing to start; check with <code>curl localhost:8000/health</code>.</li>
+    <li><span class="pill P1">P1</span> Nothing to start.</li>
+  </ol>
+  <div class="box note"><b class="t">If start_node.sh says "… is running as process …"</b>
+  That service was already up, so the VM wasn't really restarted. Skip to <code>check_cluster.sh</code>. If it isn't green, run <code>bash scripts/stop_node.sh</code> and then <code>start_node.sh</code> again.</div>
+
+  <h3>Ending a session</h3>
+  <p>Leaving everything running is fine. If you shut down, there's no special order; next time just follow the steps above.</p>
+
+  <h3>The night before the demo</h3>
+  <table>
+    <tr><th style="width:5%">✓</th><th>Item</th></tr>
+    <tr><td>☐</td><td>All 4 laptops charged, sleep/hibernate turned off, VMs on.</td></tr>
+    <tr><td>☐</td><td>ZeroTier shows all 4 <b>online</b> on my.zerotier.com, <b>from the network you will demo on</b> (campus Wi-Fi often blocks ZeroTier; test it there).</td></tr>
+    <tr><td>☐</td><td>A phone hotspot ready as a backup network.</td></tr>
+    <tr><td>☐</td><td><code>check_cluster.sh</code> is green.</td></tr>
+    <tr><td>☐</td><td>v1 and v2 already exist in <code>/exports</code> (just in case a live run fails).</td></tr>
+    <tr><td>☐</td><td>Screenshots of every "it worked" moment saved in one shared folder.</td></tr>
+    <tr><td>☐</td><td>Snapshot IDs S0 and S1 written down.</td></tr>
+    <tr><td>☐</td><td>Everyone can explain every role, not just their own.</td></tr>
+  </table>
+
+  <h3>Demo day: 15-minute script</h3>
+  <ol class="steps">
+    <li><span class="pill P2">P2</span> <code>check_cluster.sh</code>: 2 DataNodes, 2 workers, repl=2. Opens the HDFS page <code>http://node2:9870</code>.</li>
+    <li><span class="pill P1">P1</span> Phase 0 ingestion; shows the reject reasons.</li>
+    <li><span class="pill P3">P3</span> <code>node3_process.sh</code>; shows PageRank converging and the Spark history page.</li>
+    <li><span class="pill P4">P4</span> <code>pull_export.sh</code>; live search on v1.</li>
+    <li><span class="pill P1">P1</span>→<span class="pill P3">P3</span>→<span class="pill P4">P4</span> Same again with Phase 1 → v2, same words, new results. P1 re-runs Phase 1 to show nothing changes.</li>
+    <li><span class="pill P2">P2</span> Snapshot list, the S0 → S1 diff; explains rollback.</li>
+    <li><span class="pill P3">P3</span>+<span class="pill P2">P2</span> Kill a Spark executor, then stop a DataNode.</li>
+    <li><span class="pill P4">P4</span> A bad export doesn't break search; switch v2 → v1 → v2.</li>
+  </ol>
+</section>
+
+<!-- ============================ 10. TROUBLESHOOTING ============================ -->
+<section class="page">
+  <h2>10. When things break</h2>
+  <p>Problems are normal. <b>Check the network first</b>: most "the cluster is broken" problems are really "two machines can't reach each other".</p>
+
+  <h3>Network / ZeroTier</h3>
+  <p>On the machine with the problem, run:</p>
+<pre>sudo zerotier-cli info           # should say ONLINE
+sudo zerotier-cli listnetworks   # should say OK and show your 10.147.17.x IP
+sudo zerotier-cli listpeers      # DIRECT is good; RELAY means slow or blocked
+ping node2</pre>
+  <table>
+    <tr><th style="width:32%">What you see</th><th style="width:30%">Usual cause</th><th>Fix</th></tr>
+    <tr><td><code>ACCESS_DENIED</code> or <code>REQUESTING_CONFIGURATION</code></td><td>Machine not authorized</td><td><span class="pill P2">P2</span> ticks <b>Auth</b> for it on my.zerotier.com.</td></tr>
+    <tr><td><code>OFFLINE</code>, or peers stuck on <code>RELAY</code></td><td>The Wi-Fi blocks ZeroTier (common on campus/college networks)</td><td>Try a phone hotspot. If that works, it's the network: change network, or switch to Tailscale / same LAN (below).</td></tr>
+    <tr><td>Worked before, stopped after a reboot</td><td>ZeroTier service not running</td><td><code>sudo systemctl enable --now zerotier-one</code></td></tr>
+    <tr><td>Your IP changed</td><td>No fixed IP was assigned</td><td><span class="pill P2">P2</span> sets fixed IPs .11–.14 in the web UI.</td></tr>
+    <tr><td><code>ping node2</code> fails but ZeroTier says OK</td><td><code>/etc/hosts</code> is wrong</td><td>Re-run <code>sudo bash scripts/setup_hosts.sh N</code>.</td></tr>
+    <tr><td>The web pages (node2:9870 etc.) don't open on your laptop</td><td>Your laptop isn't on the network or doesn't know the names</td><td>Join the laptop to ZeroTier too, and use the IP (e.g. <code>http://10.147.17.12:9870</code>).</td></tr>
+  </table>
+
+  <div class="box note"><b class="t">Plan B if ZeroTier won't work at all</b>
+  The code doesn't depend on ZeroTier. It only needs the 4 VMs to reach each other. You can use <b>Tailscale</b> (similar, often works where ZeroTier doesn't) or put all 4 laptops on the <b>same Wi-Fi</b> with the VMs in "bridged" network mode.
+  Then: <span class="pill P2">P2</span> puts the new IPs and subnet (<code>ZT_SUBNET</code>) in <code>cluster.env</code> and pushes; <span class="pill ALL">ALL</span> pull, then re-run
+  <code>sudo bash scripts/setup_hosts.sh N</code> and <code>sudo bash scripts/install_node.sh N</code> (this updates the firewall).</div>
+
+  <h3 style="page-break-before: always">10. When things break (continued): cluster and jobs</h3>
+  <table>
+    <tr><th style="width:34%">What you see</th><th>Fix</th></tr>
+    <tr><td><b>Live datanodes (0)</b></td><td>On that DataNode machine: <code>sudo bash scripts/setup_hosts.sh N</code>, then <code>hdfs --daemon stop datanode</code> and <code>hdfs --daemon start datanode</code>.</td></tr>
+    <tr><td><b>Incompatible clusterIDs</b> in the DataNode log</td><td>The NameNode was formatted again. On that DataNode: <code>rm -rf /data/hdfs/datanode/*</code>, then start the DataNode.</td></tr>
+    <tr><td>Node 2's worker missing from <code>node3:8080</code></td><td>It started before the master. On node2: <code>stop-worker.sh</code> then <code>start-worker.sh spark://node3:7077</code>.</td></tr>
+    <tr><td>Job stuck on <b>"Initial job has not accepted any resources"</b></td><td>No workers, or they can't reach the machine that started the job. Check <code>http://node3:8080</code> shows 2 workers, and <code>sudo ufw status</code> allows the ZeroTier range.</td></tr>
+    <tr><td><b>Catalog 'lake' not found</b> / Iceberg ClassNotFound</td><td>Iceberg jar missing on that node: <code>ls /opt/spark/jars/iceberg*</code>. Re-run <code>install_node.sh</code>.</td></tr>
+    <tr><td><b>ModuleNotFoundError: common / textutil</b></td><td>Always use <code>bash scripts/submit.sh …</code>, from inside <code>~/dse</code>.</td></tr>
+    <tr><td>Out of memory</td><td>Small VMs: set <code>spark.executor.memory</code> to <code>512m</code> in <code>/opt/spark/conf/spark-defaults.conf</code> and <code>SPARK_WORKER_MEMORY</code> to <code>1g</code> in <code>/opt/spark/conf/spark-env.sh</code>, then restart the workers.</td></tr>
+    <tr><td>Export says <b>"index is stale"</b></td><td>Not a bug. Run <code>bash scripts/node3_process.sh</code>.</td></tr>
+    <tr><td>Search page says <b>503 / No index loaded</b></td><td><span class="pill P4">P4</span>: <code>bash search/pull_export.sh</code></td></tr>
+    <tr><td>Search service not running</td><td><span class="pill P4">P4</span>: <code>sudo systemctl status search</code>, logs with <code>journalctl -u search -n 50</code>, re-install with <code>sudo bash search/install_service.sh</code>.</td></tr>
+    <tr><td><b>Totally stuck</b></td><td>Copy the last 30 lines of the newest file in <code>~/dse/logs/</code> and post them in the chat, with the command you ran.</td></tr>
+  </table>
+
+  <div class="two">
+    <div class="box ok"><b class="t">Do</b><ul>
+      <li>Read your own files line by line.</li>
+      <li>Explain your part to a teammate until they get it.</li>
+      <li>Post in the chat before touching shared files.</li>
+      <li>Screenshot every "it worked" moment.</li></ul></div>
+    <div class="box warn"><b class="t">Don't</b><ul>
+      <li>Format the NameNode by hand.</li>
+      <li>Turn off node2 or node3 while someone runs a job.</li>
+      <li>Edit only one of the two <code>textutil.py</code> files.</li>
+      <li>Say "the code just does it" in the viva. Know <i>why</i>.</li></ul></div>
+  </div>
+</section>
+
+</body>
+</html>
