@@ -60,8 +60,11 @@ EOS
 fi
 
 mkdir -p /data/hdfs/namenode /data/hdfs/datanode /data/hadoop/tmp /data/spark/work /serving
-chown -R "$CLUSTER_USER:$CLUSTER_USER" /opt/hadoop /data /serving
-[ -d /opt/spark ] && chown -R "$CLUSTER_USER:$CLUSTER_USER" /opt/spark
+# Owned by whoever ran "sudo bash ..." (works even if this machine's login isn't CLUSTER_USER;
+# HDFS permissions are disabled, so usernames don't have to match across nodes).
+OWNER="${SUDO_USER:-$CLUSTER_USER}"
+chown -R "$OWNER:" /opt/hadoop /data /serving
+[ -d /opt/spark ] && chown -R "$OWNER:" /opt/spark
 
 # ---- Firewall: allow everything from the ZeroTier subnet, plus SSH ----
 if grep -qi microsoft /proc/version; then
