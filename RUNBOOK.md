@@ -256,10 +256,9 @@ If anything fails, nothing is published and earlier versions are untouched.
 ## Phase 4 — Node 4: Search Service and UI
 
 ```bash
-# 1. Start the API (first time). Edit User/WorkingDirectory in the unit file if you're not "ubuntu".
-sudo cp search/search.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now search
+# 1. Start the API (first time). Fills in your user + this folder automatically,
+#    so it works whatever the repo folder is called.
+sudo bash search/install_service.sh
 #    (or, in a terminal:  cd search && SERVING_ROOT=/serving /opt/searchenv/bin/uvicorn app:app --host 0.0.0.0 --port 8000)
 
 # 2. Pull the newest export and switch to it

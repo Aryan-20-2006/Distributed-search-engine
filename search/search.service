@@ -1,6 +1,6 @@
-# sudo cp search/search.service /etc/systemd/system/ && sudo systemctl daemon-reload
-# sudo systemctl enable --now search   ;  journalctl -u search -f
-# EDIT User= and WorkingDirectory= to match your user / where you cloned the project.
+# Install with:  sudo bash search/install_service.sh   (logs: journalctl -u search -f)
+# That script replaces User= and WorkingDirectory= below with your user and the real
+# folder, so you don't need to edit them by hand.
 [Unit]
 Description=Mini-Google search API (FastAPI)
 After=network-online.target
