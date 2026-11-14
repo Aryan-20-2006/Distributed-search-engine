@@ -64,9 +64,15 @@ chown -R "$CLUSTER_USER:$CLUSTER_USER" /opt/hadoop /data /serving
 [ -d /opt/spark ] && chown -R "$CLUSTER_USER:$CLUSTER_USER" /opt/spark
 
 # ---- Firewall: allow everything from the ZeroTier subnet, plus SSH ----
-ufw allow OpenSSH >/dev/null
-ufw allow from "$ZT_SUBNET" >/dev/null
-ufw --force enable >/dev/null
+if grep -qi microsoft /proc/version; then
+  # WSL: ufw usually can't run here, and ZeroTier traffic arrives directly inside
+  # the WSL VM (it doesn't pass through a Linux firewall). Skip it.
+  echo "WSL detected: skipping ufw firewall setup"
+else
+  ufw allow OpenSSH >/dev/null
+  ufw allow from "$ZT_SUBNET" >/dev/null
+  ufw --force enable >/dev/null
+fi
 
 if [ "$N" = "4" ]; then
   python3 -m venv /opt/searchenv
