@@ -269,13 +269,79 @@ curl -s http://localhost:8000/health        # {"status":"ok","version":0}
 - HDFS: `http://10.31.88.110:9870` (Datanodes / Utilities → Browse the file system)
 - Search: `http://10.31.88.99:8000`
 
-### During the demo
-- **Start Phase 1 at the very start of the slot.** It takes ~30 min in total. Show the §1 checks (`hdfs dfsadmin -report`, `fsck`, the 9870 UI) and the search site **while** the jobs run.
-- Run Phase 1 exactly like Stage 4, but with fewer PageRank iterations on node3 (10 is the minimum the job allows, and roughly halves PageRank time):
-  ```bash
-  ITERATIONS=10 bash scripts/node3_process.sh
-  ```
-- `WARN ... Lost executor` / `Slow waitForAckedSeqno` lines can appear on this network. Spark recovers by itself; that's the fault tolerance working. Only stop if it ends in `Traceback`.
+---
+
+## Stage 7: THE DEMO: run only this (in order)
+
+Everything is already set up (Stage 6). **Start step 1 the moment the slot begins.** Phase 1 takes ~30 min,
+so show the Phase 0 checks (step 0) **while** steps 1 to 3 run.
+`WARN ... Lost executor` / `Slow waitForAckedSeqno` lines are normal on this network (Spark recovers, which is fault tolerance).
+Only stop if a step ends in `Traceback`.
+
+**0. Phase 0 checks (show these while Phase 1 runs):**
+```bash
+# node2 (Aryan)
+hdfs dfsadmin -report                                   # Live datanodes (2)
+hdfs dfs -ls -R / | grep -i jsonl                       # /input/pages.jsonl, 9.4 MB
+hdfs fsck /input/pages.jsonl -files -blocks -locations  # Live_repl=2, HEALTHY
+# Browser: http://10.31.88.110:9870 -> Datanodes, and Utilities -> Browse the file system -> /input
+```
+Baseline values to quote: doc 94 title = **"Beard"**, doc 146 rank = **0.0017555209979530698**.
+
+**1. Aniket (node1): Phase 1 ingest (~5 min):**
+```bash
+cd ~/dse
+bash scripts/node1_ingest_phase.sh 1 ~/data/changes.jsonl
+```
+Wait for `DONE. pages snapshot 7157477335341662673 -> <new id>. pages now=975`, then tell Khush.
+
+**2. Khush (node3): index, PageRank (10 iterations) and export (~15-20 min):**
+```bash
+cd ~/dse
+ITERATIONS=10 bash scripts/node3_process.sh
+```
+Look for: `deleted 50 / updated 25 / inserted 25`, `re-tokenized 50 docs`, `PAGERANK DONE: sum of ranks = 1.000000`,
+`EXPORT PUBLISHED: hdfs://node2:9000/serving/v1`. Then tell node4.
+
+**3. node4 (spare laptop): switch the search to v1 (seconds):**
+```bash
+cd ~/dse
+bash search/pull_export.sh                    # >> now serving v1
+```
+
+**4. Checklist §2: check each job (node3, one command at a time):**
+```bash
+spark-sql -e "SELECT snapshot_id, committed_at FROM lake.db.pages.snapshots;"                           # >= 2 snapshots
+spark-sql -e "SELECT term, doc_id FROM lake.db.postings WHERE doc_id = 'phase1-new-001' LIMIT 5;"       # 5 rows
+spark-sql -e "SELECT COUNT(*) AS deleted_doc_ranks FROM lake.db.pagerank WHERE doc_id = '1';"           # 0
+hdfs dfs -ls /serving/v0/                                                                              # docs.parquet, index.parquet
+hdfs dfs -ls /serving/v1/                                                                              # docs.parquet, index.parquet
+```
+
+**5. Checklist §3: search (node4 curl + node3 spark-sql; these two machines can run at the same time):**
+```bash
+# node4
+curl -s http://localhost:8000/health                                              # {"status":"ok","version":1}
+curl -s "http://localhost:8000/search?q=beard&limit=5" | python3 -m json.tool      # doc 94 "Beard (Phase 1)"
+curl -s "http://localhost:8000/search?q=cooking&limit=5" | python3 -m json.tool    # doc 146 in results
+curl -s "http://localhost:8000/search?q=plant+growth&limit=5"                      # valid JSON, no 500
+
+# node3
+hdfs dfs -test -e /serving/v1/_READY && echo "v1 ready"                             # v1 ready
+spark-sql -e "SELECT doc_id, title FROM lake.db.pages WHERE doc_id = '94';"        # 94  Beard (Phase 1)
+spark-sql -e "SELECT doc_id, rank FROM lake.db.pagerank WHERE doc_id = '146';"     # higher than 0.0017555209979530698
+```
+Browser: `http://10.31.88.99:8000` now says **"Serving index v1"**.
+
+**6. Checklist §4: idempotency (count, re-run ingest, count again; the counts must match):**
+```bash
+# node3
+spark-sql -e "SELECT COUNT(*) FROM lake.db.pages;"                # 975
+# node1 (Aniket)
+bash scripts/node1_ingest_phase.sh 1 ~/data/changes.jsonl         # actions={'noop': ...}, "No page changes -> skipping MERGE"
+# node3
+spark-sql -e "SELECT COUNT(*) FROM lake.db.pages;"                # 975 again
+```
 
 ---
 
