@@ -45,6 +45,17 @@ grep ^NODE cluster.env        # must show 10.31.88.79 / .110 / .128 / .161
 
 > Never edit files inside `~/dse` on your node. Code changes are pushed to GitHub, and you only ever run `git pull`.
 
+### Dataset (Aniket only)
+The dataset is **not** in the repo (Git ignores `*.jsonl`), so cloning won't fetch it. Only **node1 (Aniket)** needs it, kept **outside** the repo folder:
+```bash
+ls -lh ~/data/pages.jsonl ~/data/changes.jsonl     # both must exist
+```
+If you saved it inside `~/dse/`, move it out **before** deleting or re-cloning `~/dse`:
+```bash
+mkdir -p ~/data && mv ~/dse/data/*.jsonl ~/data/
+```
+(Optional backup: Khush keeps a copy in his `~/data/` too, so node3 can run the ingest if node1 fails.)
+
 ---
 
 ## Stage 1: Setup (everyone at the same time)
