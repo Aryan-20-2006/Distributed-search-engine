@@ -2,6 +2,12 @@
 # Usage (as CLUSTER_USER, not root): bash scripts/start_node.sh <2|3>
 # Start node 2 BEFORE node 3 the first time.
 set -euo pipefail
+# Run in a new session with no controlling terminal, so the daemons are NOT killed
+# (SIGHUP) when this terminal / SSH / WSL window is closed.
+if [ -z "${DSE_DETACHED:-}" ]; then
+  export DSE_DETACHED=1
+  exec setsid -w bash "$0" "$@" < /dev/null
+fi
 source /etc/profile.d/bigdata.sh
 N="${1:?node 2 or 3}"
 case "$N" in
