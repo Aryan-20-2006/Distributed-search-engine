@@ -206,9 +206,76 @@ spark-sql -e "SELECT COUNT(*) FROM lake.db.pages;"
 
 ---
 
-## Stage 5: Reset for Monday
+## Stage 5: Reset to Phase 0 (tonight, right after the rehearsal)
 
-**Aryan (node2):** wipes the tables and exports on HDFS (exact commands will be added here after the rehearsal passes). Then we rerun **Stage 2 step 3** and **all of Stage 3**. That leaves the cluster at the Phase 0 baseline, so Phase 1 can run live at the demo.
+We do NOT re-run Phase 0. Iceberg kept the Phase 0 table versions, so we just point the tables back at them. Takes ~5 minutes.
+
+**1. Aryan (node2).** Only when no Spark job is running:
+```bash
+cd ~/dse && git pull
+bash scripts/reset_to_phase0.sh
+```
+Expect at the end:
+```
+1000
+94	Beard
+146	0.0017555209979530698
+... /serving/v0          (only v0, no v1)
+```
+
+**2. node4 (spare laptop):** switch back to v0 and delete the rehearsal copy:
+```bash
+bash search/pull_export.sh 0
+rm -rf /serving/v1          # IMPORTANT: otherwise Monday's pull reuses tonight's rehearsal v1
+curl -s http://localhost:8000/health        # {"status":"ok","version":0}
+curl -s "http://localhost:8000/search?q=beard&limit=5" | python3 -m json.tool   # doc 94 "Beard"
+```
+
+After this, **don't run anything else** until Monday. The data stays on disk when laptops are shut down.
+
+---
+
+## Stage 6: Monday, before the demo (start 1 hour early, not minutes before)
+
+**1. Everyone.** Laptops charged and plugged in, sleep turned off. Check ZeroTier, **from the network you'll present on**:
+```bash
+sudo zerotier-cli listnetworks       # must say OK
+ping -c3 node2                       # must reply
+```
+If the network is slow or blocked, put all 4 laptops on one phone hotspot.
+
+**2. Aryan (node2).** Open the Ubuntu-22.04 window (Windows Terminal → Ubuntu-22.04, or `wsl -d Ubuntu-22.04`) and keep it open:
+```bash
+cd ~/dse && bash scripts/start_node.sh 2
+```
+
+**3. Khush (node3).** Start the VM, then:
+```bash
+cd ~/dse && bash scripts/start_node.sh 3
+stop-history-server.sh               # saves memory on the small VM
+```
+
+**4. Aryan (node2).** Check the cluster:
+```bash
+bash scripts/check_cluster.sh        # Live datanodes (2), 2 ALIVE workers
+```
+
+**5. node4 (spare laptop).** The search service starts by itself at boot:
+```bash
+curl -s http://localhost:8000/health        # {"status":"ok","version":0}
+```
+
+**6. Open in a browser** (any laptop on ZeroTier):
+- HDFS: `http://10.31.88.110:9870` (Datanodes / Utilities → Browse the file system)
+- Search: `http://10.31.88.99:8000`
+
+### During the demo
+- **Start Phase 1 at the very start of the slot.** It takes ~30 min in total. Show the §1 checks (`hdfs dfsadmin -report`, `fsck`, the 9870 UI) and the search site **while** the jobs run.
+- Run Phase 1 exactly like Stage 4, but with fewer PageRank iterations on node3 (10 is the minimum the job allows, and roughly halves PageRank time):
+  ```bash
+  ITERATIONS=10 bash scripts/node3_process.sh
+  ```
+- `WARN ... Lost executor` / `Slow waitForAckedSeqno` lines can appear on this network. Spark recovers by itself; that's the fault tolerance working. Only stop if it ends in `Traceback`.
 
 ---
 
