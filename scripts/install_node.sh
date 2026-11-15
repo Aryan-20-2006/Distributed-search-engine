@@ -85,7 +85,7 @@ if grep -qi microsoft /proc/version; then
   # the WSL VM (it doesn't pass through a Linux firewall). Skip it.
   echo "WSL detected: skipping ufw firewall setup"
 else
-  ufw allow OpenSSH >/dev/null
+  ufw allow 22/tcp >/dev/null          # SSH by port number (works even if openssh-server is not installed)
   ufw allow from "$ZT_SUBNET" >/dev/null
   ufw --force enable >/dev/null
 fi
