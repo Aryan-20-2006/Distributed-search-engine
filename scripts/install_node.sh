@@ -23,6 +23,17 @@ fi
 "$PY" --version
 
 cd /opt
+# A machine may already have an OLD Hadoop/Spark in /opt from another course. A version
+# mismatch with the cluster breaks everything, so move any wrong version aside.
+STAMP="$(date +%Y%m%d%H%M%S)"
+if [ -d /opt/hadoop ] && [ ! -f "/opt/hadoop/share/hadoop/common/hadoop-common-${HADOOP_VERSION}.jar" ]; then
+  echo "!! /opt/hadoop is not Hadoop ${HADOOP_VERSION} -> moving it to /opt/hadoop.old.$STAMP"
+  mv /opt/hadoop "/opt/hadoop.old.$STAMP"
+fi
+if [ "$N" != "4" ] && [ -d /opt/spark ] && ! ls /opt/spark/jars/spark-core_*-"${SPARK_VERSION}".jar >/dev/null 2>&1; then
+  echo "!! /opt/spark is not Spark ${SPARK_VERSION} -> moving it to /opt/spark.old.$STAMP"
+  mv /opt/spark "/opt/spark.old.$STAMP"
+fi
 if [ ! -d /opt/hadoop ]; then
   wget -q --show-progress "https://archive.apache.org/dist/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz"
   tar xzf "hadoop-${HADOOP_VERSION}.tar.gz" && mv "hadoop-${HADOOP_VERSION}" hadoop && rm "hadoop-${HADOOP_VERSION}.tar.gz"
@@ -37,7 +48,10 @@ if [ "$N" != "4" ]; then
     "https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.5_2.12/${ICEBERG_VERSION}/$JAR"
 fi
 
-JAVA_HOME_PATH="$(dirname "$(dirname "$(readlink -f "$(which java)")")")"
+# Always Java 11, even if the machine's default `java` is newer (Java 17/21 break this Spark/Hadoop).
+JAVA_HOME_PATH="$(ls -d /usr/lib/jvm/java-11-openjdk-* 2>/dev/null | head -1)"
+[ -n "$JAVA_HOME_PATH" ] || { echo "ERROR: Java 11 not found under /usr/lib/jvm"; exit 1; }
+"$JAVA_HOME_PATH/bin/java" -version 2>&1 | head -1
 cat > /etc/profile.d/bigdata.sh <<EOP
 export JAVA_HOME=$JAVA_HOME_PATH
 export HADOOP_HOME=/opt/hadoop
@@ -45,7 +59,7 @@ export HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
 export SPARK_HOME=/opt/spark
 export PYSPARK_PYTHON=$PY
 export PYSPARK_DRIVER_PYTHON=$PY
-export PATH=\$PATH:/opt/hadoop/bin:/opt/hadoop/sbin:/opt/spark/bin:/opt/spark/sbin
+export PATH=$JAVA_HOME_PATH/bin:/opt/hadoop/bin:/opt/hadoop/sbin:/opt/spark/bin:/opt/spark/sbin:\$PATH
 EOP
 
 # ---- Hadoop configs (identical on every node) ----
