@@ -87,8 +87,12 @@ def _as_version(v):
     return None
 
 
-def parse_line(line_no, line):
-    """Pure Python -> tuple matching PARSED_SCHEMA. Runs on the executors."""
+def parse_line(line_no, line, default_version=None):
+    """Pure Python -> tuple matching PARSED_SCHEMA. Runs on the executors.
+    default_version: used when a record has NO version field at all (the course dataset
+    has none) -> we use the phase number, so Phase 1 records supersede Phase 0 ones and
+    re-running the same phase is a no-op. A version field that is present but invalid
+    is still rejected."""
     raw = line if len(line) <= 2000 else line[:2000] + "...<truncated>"
 
     def bad(reason):
@@ -125,7 +129,8 @@ def parse_line(line_no, line):
 
     if doc_id is None:
         return bad("missing_doc_id")
-    version = _as_version(_pick(rec, "version"))
+    v_raw = _pick(rec, "version")
+    version = default_version if v_raw is None else _as_version(v_raw)
     if version is None:
         return bad("missing_or_invalid_version")
 
@@ -151,9 +156,9 @@ def parse_line(line_no, line):
             text, links, version, op)
 
 
-def parse_input(spark, path):
+def parse_input(spark, path, default_version=None):
     lines = spark.sparkContext.textFile(path)
-    parsed = lines.zipWithIndex().map(lambda li: parse_line(li[1] + 1, li[0]))
+    parsed = lines.zipWithIndex().map(lambda li: parse_line(li[1] + 1, li[0], default_version))
     return spark.createDataFrame(parsed, PARSED_SCHEMA)
 
 
@@ -201,7 +206,7 @@ def main():
     before_snap = current_snapshot(spark, T_PAGES)
 
     with timed("parse + validate"):
-        parsed = parse_input(spark, args.input).cache()
+        parsed = parse_input(spark, args.input, default_version=args.phase).cache()
         n_read = parsed.count()
         rejects = parsed.filter(~F.col("ok"))
         n_rej = rejects.count()

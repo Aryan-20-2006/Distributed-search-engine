@@ -35,13 +35,13 @@
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-fetch('/health').then(r=>r.json()).then(h=>{ $('#meta').textContent = h.ok ? `Serving index v${h.version}` : 'No index loaded'; });
+fetch('/health').then(r=>r.json()).then(h=>{ $('#meta').textContent = h.status === 'ok' ? `Serving index v${h.version}` : 'No index loaded'; });
 async function run(q){
   if(!q.trim()) return;
   history.replaceState(null,'','?q='+encodeURIComponent(q));
   $('#out').innerHTML='';
   try{
-    const r = await fetch('/search?k=20&q='+encodeURIComponent(q));
+    const r = await fetch('/search?limit=20&q='+encodeURIComponent(q));
     const d = await r.json();
     if(!r.ok) throw new Error(d.detail||r.status);
     $('#meta').textContent = `${d.total_hits} results · ${d.took_ms} ms · index v${d.index_version} · terms: ${d.terms.join(', ')||'(none)'}`;

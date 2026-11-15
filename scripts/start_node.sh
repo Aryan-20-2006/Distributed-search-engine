@@ -18,7 +18,7 @@ case "$N" in
     hdfs --daemon start namenode
     hdfs --daemon start datanode
     sleep 5
-    hdfs dfs -mkdir -p /warehouse /spark-logs /input /exports /checkpoints
+    hdfs dfs -mkdir -p /warehouse /spark-logs /input /serving /checkpoints
     start-worker.sh spark://node3:7077
     ;;
   3)

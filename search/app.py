@@ -14,6 +14,7 @@ import threading
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import pyarrow.parquet as pq
@@ -42,8 +43,8 @@ class Index:
         if self.manifest.get("status") != "complete":
             raise ValueError("manifest status is not 'complete'")
 
-        docs = pq.read_table(self.path / "docs").to_pandas()
-        posts = pq.read_table(self.path / "postings").to_pandas()
+        docs = pq.read_table(self.path / "docs.parquet").to_pandas()
+        posts = pq.read_table(self.path / "index.parquet").to_pandas()
         if len(docs) != self.manifest["num_docs"] or len(posts) != self.manifest["num_postings"]:
             raise ValueError(f"row counts {len(docs)}/{len(posts)} don't match manifest")
 
@@ -151,10 +152,13 @@ def _require():
 
 
 @app.get("/search")
-def search(q: str = Query(..., min_length=1, max_length=300), k: int = Query(10, ge=1, le=100)):
+def search(q: str = Query(..., min_length=1, max_length=300),
+           limit: Optional[int] = Query(None, ge=1, le=100),
+           k: int = Query(10, ge=1, le=100)):
+    """?limit=N (or the older ?k=N) = number of results."""
     idx = _require()
     t0 = time.perf_counter()
-    terms, matched, total, results = idx.search(q, k)
+    terms, matched, total, results = idx.search(q, limit or k)
     return {"query": q, "terms": terms, "matched_terms": matched, "total_hits": total,
             "took_ms": round((time.perf_counter() - t0) * 1000, 2),
             "index_version": idx.manifest["version"], "results": results}
@@ -181,9 +185,13 @@ def version():
 
 @app.get("/health")
 def health():
-    return {"ok": _index is not None,
-            "version": _index.manifest["version"] if _index else None,
-            "last_reload_error": _last_error}
+    """{"status":"ok","version":N} when an index is loaded."""
+    if _index is None:
+        return {"status": "no_index", "version": None, "last_reload_error": _last_error}
+    out = {"status": "ok", "version": _index.manifest["version"]}
+    if _last_error:          # serving fine, but the most recent reload attempt failed
+        out["last_reload_error"] = _last_error
+    return out
 
 
 @app.post("/admin/reload")

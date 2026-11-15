@@ -2,15 +2,17 @@
 
     bash scripts/submit.sh jobs/export.py
 
-Writes to hdfs://node2:9000/exports/.tmp_vN/ then, ONLY if every check passes,
-atomically renames it to /exports/vN/ (an HDFS rename is atomic). Node 4 only
-ever pulls directories named vN that contain manifest.json, so it can never see
-a half-written or failed export. Previous versions are never touched.
+Writes to hdfs://node2:9000/serving/.tmp_vN/ then, ONLY if every check passes,
+atomically renames it to /serving/vN/ (an HDFS rename is atomic) and finally
+creates /serving/vN/_READY. Node 4 only pulls versions that have _READY, so it
+can never see a half-written or failed export. Previous versions are never touched.
+Versions start at v0 (Phase 0), then v1 (Phase 1), ...
 
-Layout of /exports/vN/:
-    docs/      parquet: doc_id, url, title, version, doc_len, pagerank
-    postings/  parquet: term, doc_id, tf
+Layout of /serving/vN/ (plain single Parquet files):
+    docs.parquet   doc_id, url, title, version, doc_len, pagerank
+    index.parquet  inverted index: term, doc_id, tf
     manifest.json  counts, avgdl, Iceberg snapshot ids, created_at
+    _READY         empty marker, written last
 """
 import json
 import re
@@ -26,13 +28,29 @@ def hfs(spark, path):
 
 
 def next_version(spark, root):
+    """v0 for the first export, then max+1."""
     fs, p, _ = hfs(spark, root)
     if not fs.exists(p):
         fs.mkdirs(p)
-        return 1
+        return 0
     nums = [int(m.group(1)) for st in fs.listStatus(p)
             if (m := re.fullmatch(r"v(\d+)", st.getPath().getName()))]
-    return max(nums, default=0) + 1
+    return max(nums) + 1 if nums else 0
+
+
+def write_single_parquet(spark, df, tmp_dir, target_file):
+    """Write df as ONE plain Parquet file at target_file (Spark always writes a folder
+    of part files, so write to a scratch folder and move the single part file out)."""
+    fs, _, jvm = hfs(spark, tmp_dir)
+    Path = jvm.org.apache.hadoop.fs.Path
+    df.coalesce(1).write.mode("overwrite").parquet(tmp_dir)
+    parts = [st.getPath() for st in fs.listStatus(Path(tmp_dir))
+             if st.getPath().getName().startswith("part-")]
+    if len(parts) != 1:
+        raise SystemExit(f"expected 1 part file in {tmp_dir}, found {len(parts)}")
+    if not fs.rename(parts[0], Path(target_file)):
+        raise SystemExit(f"could not move {parts[0]} -> {target_file}")
+    fs.delete(Path(tmp_dir), True)
 
 
 def write_text(spark, path, text):
@@ -112,21 +130,25 @@ def main():
     fs.delete(jvm.org.apache.hadoop.fs.Path(tmp), True)
 
     with timed(f"write parquet to {tmp}"):
-        docs.coalesce(1).write.mode("overwrite").parquet(f"{tmp}/docs")
-        postings.orderBy("term", "doc_id").coalesce(2).write.mode("overwrite").parquet(f"{tmp}/postings")
+        write_single_parquet(spark, docs.orderBy("doc_id"), f"{tmp}/_docs_parts", f"{tmp}/docs.parquet")
+        write_single_parquet(spark, postings.orderBy("term", "doc_id"),
+                             f"{tmp}/_index_parts", f"{tmp}/index.parquet")
         # read back what was written and re-check counts (catches partial writes)
-        rd, rp = spark.read.parquet(f"{tmp}/docs").count(), spark.read.parquet(f"{tmp}/postings").count()
+        rd = spark.read.parquet(f"{tmp}/docs.parquet").count()
+        rp = spark.read.parquet(f"{tmp}/index.parquet").count()
         if (rd, rp) != (stats["num_docs"], stats["num_postings"]):
             fs.delete(jvm.org.apache.hadoop.fs.Path(tmp), True)
             raise SystemExit(f"read-back mismatch docs={rd} postings={rp}; export aborted")
 
     manifest = {"version": version, "status": "complete",
+                "files": {"docs": "docs.parquet", "index": "index.parquet"},
                 "created_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
                 "iceberg_snapshots": snaps, "pagerank_iterations": pr_state.get("iterations"),
                 **stats}
     write_text(spark, f"{tmp}/manifest.json", json.dumps(manifest, indent=2))
     if not fs.rename(jvm.org.apache.hadoop.fs.Path(tmp), jvm.org.apache.hadoop.fs.Path(final)):
         raise SystemExit("HDFS rename failed")
+    write_text(spark, f"{final}/_READY", "")      # marker LAST: vN is complete and servable
     banner(f"EXPORT PUBLISHED: {final}\n{json.dumps(manifest, indent=2)}")
     spark.stop()
 

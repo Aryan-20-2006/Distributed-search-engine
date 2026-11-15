@@ -5,4 +5,4 @@ cd "$(dirname "$0")/.."
 bash scripts/submit.sh jobs/index.py
 bash scripts/submit.sh jobs/pagerank.py --iterations "${ITERATIONS:-20}"
 bash scripts/submit.sh jobs/export.py
-source /etc/profile.d/bigdata.sh; hdfs dfs -ls /exports
+source /etc/profile.d/bigdata.sh; hdfs dfs -ls /serving

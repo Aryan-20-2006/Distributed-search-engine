@@ -1,5 +1,6 @@
 """Shared settings + helpers for every Spark job. Shipped to executors with --py-files."""
 import json
+import os
 import time
 from contextlib import contextmanager
 
@@ -18,8 +19,10 @@ T_DOC_STATS = f"{NAMESPACE}.doc_stats"    # (doc_id, doc_len) for BM25
 T_PAGERANK = f"{NAMESPACE}.pagerank"      # (doc_id, rank)
 T_JOB_STATE = f"{NAMESPACE}.job_state"    # which source snapshot each job last processed
 
-EXPORT_ROOT = "hdfs://node2:9000/exports"
-CHECKPOINT_DIR = "hdfs://node2:9000/checkpoints"
+# Serving exports: /serving/v0 (Phase 0), /serving/v1 (Phase 1), ... on HDFS.
+# Env overrides exist only for local testing.
+EXPORT_ROOT = os.environ.get("DSE_SERVING_ROOT", "hdfs://node2:9000/serving")
+CHECKPOINT_DIR = os.environ.get("DSE_CHECKPOINT_DIR", "hdfs://node2:9000/checkpoints")
 
 DAMPING = 0.85
 

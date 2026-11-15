@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run on NODE 4.  bash search/pull_export.sh          -> pull the newest /exports/vN
+# Run on NODE 4.  bash search/pull_export.sh          -> pull the newest _READY /serving/vN from HDFS
 #                 bash search/pull_export.sh 1        -> (re)activate a specific version, e.g. v1
 # Steps: download to /serving/.incoming_vN -> verify -> rename to /serving/vN ->
 #        flip the /serving/current symlink atomically -> ask the API to reload.
@@ -10,14 +10,23 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="${SERVING_ROOT:-/serving}"; API="${API:-http://localhost:8000}"
 PY=/opt/searchenv/bin/python
 
+HROOT="${HDFS_SERVING:-/serving}"     # exports on HDFS: $HROOT/vN/{docs.parquet,index.parquet,manifest.json,_READY}
+
 if [ -n "${1:-}" ]; then V="v$1"
-else V="$(hdfs dfs -ls /exports | awk '{print $NF}' | grep -E '/exports/v[0-9]+$' | xargs -n1 basename | sort -V | tail -1)"; fi
-[ -n "$V" ] || { echo "No completed exports on HDFS yet"; exit 1; }
+else
+  # newest vN on HDFS that has its _READY marker
+  V=""
+  for cand in $(hdfs dfs -ls "$HROOT" 2>/dev/null | awk '{print $NF}' | grep -E "/v[0-9]+$" | xargs -rn1 basename | sort -rV); do
+    if hdfs dfs -test -e "$HROOT/$cand/_READY"; then V="$cand"; break; fi
+  done
+fi
+[ -n "$V" ] || { echo "No completed (_READY) exports in HDFS $HROOT yet"; exit 1; }
 echo ">> target version: $V"
 
 if [ ! -d "$ROOT/$V" ]; then
+  hdfs dfs -test -e "$HROOT/$V/_READY" || { echo "$HROOT/$V has no _READY marker - not pulling"; exit 1; }
   rm -rf "$ROOT/.incoming_$V"
-  hdfs dfs -get "/exports/$V" "$ROOT/.incoming_$V"
+  hdfs dfs -get "$HROOT/$V" "$ROOT/.incoming_$V"
   $PY "$HERE/verify_export.py" "$ROOT/.incoming_$V" || { echo "VERIFY FAILED - keeping current version"; rm -rf "$ROOT/.incoming_$V"; exit 1; }
   mv "$ROOT/.incoming_$V" "$ROOT/$V"
 else
