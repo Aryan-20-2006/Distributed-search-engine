@@ -10,6 +10,18 @@ MYIP_VAR="NODE${N}_IP"; MYIP="${!MYIP_VAR}"
 apt-get update -y
 apt-get install -y openjdk-11-jdk-headless python3 python3-pip python3-venv curl wget rsync net-tools ufw
 
+# PySpark refuses to run if the driver (e.g. node1) and the executors (node2/3) use a
+# different Python minor version. Pin EVERY node to python3.10, whatever the Ubuntu
+# release (22.04 ships it; 20.04/24.04 get it from the deadsnakes PPA).
+PY=python3.10
+if ! command -v "$PY" >/dev/null || ! "$PY" -c 'import venv, ensurepip' 2>/dev/null; then
+  apt-get install -y software-properties-common
+  add-apt-repository -y ppa:deadsnakes/ppa
+  apt-get update -y
+  apt-get install -y python3.10 python3.10-venv
+fi
+"$PY" --version
+
 cd /opt
 if [ ! -d /opt/hadoop ]; then
   wget -q --show-progress "https://archive.apache.org/dist/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz"
@@ -31,7 +43,8 @@ export JAVA_HOME=$JAVA_HOME_PATH
 export HADOOP_HOME=/opt/hadoop
 export HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
 export SPARK_HOME=/opt/spark
-export PYSPARK_PYTHON=python3
+export PYSPARK_PYTHON=$PY
+export PYSPARK_DRIVER_PYTHON=$PY
 export PATH=\$PATH:/opt/hadoop/bin:/opt/hadoop/sbin:/opt/spark/bin:/opt/spark/sbin
 EOP
 
@@ -47,7 +60,7 @@ if [ "$N" != "4" ]; then
   cat > /opt/spark/conf/spark-env.sh <<EOS
 export JAVA_HOME=$JAVA_HOME_PATH
 export HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
-export PYSPARK_PYTHON=python3
+export PYSPARK_PYTHON=$PY
 export SPARK_LOCAL_IP=$MYIP
 export SPARK_LOCAL_HOSTNAME=node$N
 export SPARK_MASTER_HOST=node3
@@ -77,8 +90,9 @@ else
   ufw --force enable >/dev/null
 fi
 
-if [ "$N" = "4" ]; then
-  python3 -m venv /opt/searchenv
+# Search API venv: node4, or any node given WITH_SEARCH=1 (node1 = backup for node4).
+if [ "$N" = "4" ] || [ "${WITH_SEARCH:-0}" = "1" ]; then
+  "$PY" -m venv /opt/searchenv
   /opt/searchenv/bin/pip install -q -r "$DIR/search/requirements.txt"
 fi
 echo "Node $N installed. Log out and back in (or: source /etc/profile.d/bigdata.sh)."
