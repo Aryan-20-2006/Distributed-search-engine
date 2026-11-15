@@ -8,7 +8,7 @@ Commands run on each person's Ubuntu machine/VM, inside a terminal, as your norm
 | node1 | Aniket | Ingestion (also backup for node4) | 10.31.88.79 |
 | node2 | Aryan | HDFS NameNode + DataNode, Spark worker | 10.31.88.110 |
 | node3 | Khush | Spark master + worker, HDFS DataNode | 10.31.88.128 |
-| node4 | Kruthik | Search API + UI | 10.31.88.161 |
+| node4 | spare laptop | Search API + UI | 10.31.88.99 |
 
 ---
 
@@ -40,7 +40,7 @@ cd ~/dse
 
 Check that you have the real IPs:
 ```bash
-grep ^NODE cluster.env        # must show 10.31.88.79 / .110 / .128 / .161
+grep ^NODE cluster.env        # must show 10.31.88.79 / .110 / .128 / .99
 ```
 
 > Never edit files inside `~/dse` on your node. Code changes are pushed to GitHub, and you only ever run `git pull`.
@@ -82,7 +82,7 @@ sudo bash scripts/install_node.sh 3
 source /etc/profile.d/bigdata.sh
 ```
 
-**Kruthik (node4):** (Aniket is the backup if he's absent)
+**node4 (spare laptop, 10.31.88.99):** (Aniket's node1 is the backup if this laptop fails)
 ```bash
 cd ~/dse && git pull
 sudo bash scripts/setup_hosts.sh 4
@@ -91,6 +91,8 @@ source /etc/profile.d/bigdata.sh
 ```
 
 `setup_hosts.sh` ends by pinging node1 to node4. Each node should say `reachable`.
+
+> **node4 moved to 10.31.88.99.** If you ran `setup_hosts.sh` before this change, run `cd ~/dse && git pull` and then run `sudo bash scripts/setup_hosts.sh N` again so your `/etc/hosts` points node4 to `.99`.
 
 ---
 
@@ -131,7 +133,7 @@ bash scripts/node1_ingest_phase.sh 0 ~/data/pages.jsonl
 bash scripts/node3_process.sh
 ```
 
-**3. Kruthik (node4), or Aniket if Kruthik is absent:** start the search API and load the export
+**3. node4 (spare laptop), or Aniket if it fails:** start the search API and load the export
 ```bash
 sudo bash search/install_service.sh
 bash search/pull_export.sh
@@ -168,7 +170,7 @@ bash scripts/node1_ingest_phase.sh 1 ~/data/changes.jsonl
 bash scripts/node3_process.sh
 ```
 
-**3. Kruthik (node4), or Aniket:**
+**3. node4 (spare laptop), or Aniket:**
 ```bash
 bash search/pull_export.sh
 ```
